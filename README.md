@@ -17,6 +17,6 @@ test-plugin/          # Example / test plugin
 
 1. Create a new folder named after the plugin ID
 2. Add a `snowify-plugin.json` manifest, `renderer.js`, and optionally `styles.css`
-3. Register the plugin in `plugins/registry.json` in the main [Snowify](https://github.com/nyakuoff/Snowify) repo with `"repo": "nyakuoff/snowify-plugins"` and `"path": "your-plugin-id"`
+3. Register the plugin in `plugins/registry.json` in the main [Snowify](https://github.com/nyakuoff/Snowify) repo with `"repo": "nyakuoff/Snowify-Plugins"` and `"path": "your-plugin-id"`
 
 See [PLUGINS.md](https://github.com/nyakuoff/Snowify/blob/main/PLUGINS.md) for the full plugin development guide.

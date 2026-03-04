@@ -13,7 +13,7 @@
   const GEO_URL = 'http://ip-api.com/json/?fields=country,countryCode,city';
   const VOLUME_SCALE = 0.3;
   const SEARCH_DEBOUNCE = 400;
-  const PLAY_TIMEOUT = 15000;
+  const PLAY_TIMEOUT = 25000;
   const SCROLL_DISTANCE = 400;
   const STORAGE_KEY = 'snowify_radio';
   const LIVE_BADGE = 'LIVE';
@@ -441,6 +441,7 @@
   let _searchTimer = null;
   let _audioEl = null;
   let _toastTimeout = null;
+  let _stallTimer = null;
   let _savedNP = null;
   let _radioBtn = null;
   let _radioView = null;
@@ -533,7 +534,7 @@
   // ═══════ Audio Element ═══════
   function createAudio() {
     _audioEl = new Audio();
-    _audioEl.crossOrigin = 'anonymous';
+    _audioEl.preload = 'none';
     _audioEl.addEventListener('ended', () => {
       showToast(t('toast.radioStreamEnded'));
       cleanup();
@@ -545,7 +546,12 @@
     });
     _audioEl.addEventListener('stalled', () => {
       if (!_active) return;
-      showToast(t('toast.radioStreamStalled'));
+      clearTimeout(_stallTimer);
+      _stallTimer = setTimeout(() => {
+        if (_active && _audioEl.readyState < 3) {
+          showToast(t('toast.radioStreamStalled'));
+        }
+      }, 10000);
     });
     _audioEl.addEventListener('waiting', () => {
       if (!_active) return;
@@ -553,6 +559,7 @@
       $('#max-np-progress-bar')?.classList.add('radio-buffering');
     });
     _audioEl.addEventListener('playing', () => {
+      clearTimeout(_stallTimer);
       $('#progress-bar')?.classList.remove('radio-buffering');
       $('#max-np-progress-bar')?.classList.remove('radio-buffering');
     });

@@ -434,6 +434,7 @@
   let _state = { favoriteStations: [] };
   let _active = false;
   let _station = null;
+  let _ignoreAppPlayback = false;
   let _geo = null;
   let _generation = 0;
   let _stationsCache = [];
@@ -1016,9 +1017,11 @@
     // Stop current radio stream if switching stations
     if (_active && _audioEl) _audioEl.pause();
 
+    // Block the observer while we set up radio playback
+    _ignoreAppPlayback = true;
+
     // Pause main app's playback
     pauseMainApp();
-    // Ensure body class is clean so observer doesn't trigger on stale state
     document.body.classList.remove('audio-playing');
 
     _active = true;
@@ -1028,6 +1031,9 @@
 
     showRadioNP(station);
     syncPlayButton(true);
+
+    // Re-enable observer after all sync DOM mutations are done
+    requestAnimationFrame(() => { _ignoreAppPlayback = false; });
 
     try {
       showToast(t('toast.radioTuningIn', { name: station.name }));
@@ -1217,7 +1223,7 @@
     // including programmatic ones (keyboard, MediaSession, sidebar).
     // This is more reliable than watching SVG icon classes.
     new MutationObserver(() => {
-      if (!_active) return;
+      if (!_active || _ignoreAppPlayback) return;
       if (document.body.classList.contains('audio-playing')) {
         cleanup();
       }

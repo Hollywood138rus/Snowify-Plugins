@@ -1244,9 +1244,18 @@
     }).observe(document.body, { attributes: true, attributeFilter: ['class'] });
   }
 
+  function interceptTimeClicks() {
+    // Block time-total click (toggles remaining time) during radio — it overwrites LIVE badge
+    const guard = () => _active;
+    const noop = () => {};
+    interceptButton('#time-total', guard, noop);
+    interceptButton('#max-np-time-total', guard, noop);
+  }
+
   function initInterceptors() {
     interceptPlayButtons();
     interceptLikeButtons();
+    interceptTimeClicks();
     observeVolume();
     observeAppPlayback();
   }

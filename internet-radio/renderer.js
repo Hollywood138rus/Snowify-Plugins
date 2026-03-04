@@ -950,21 +950,23 @@
     // Like button state
     $('#np-like')?.classList.toggle('liked', isFavorite(station));
 
-    // LIVE badge
-    const timeTotal = $('#time-total');
-    if (timeTotal) { timeTotal.textContent = LIVE_BADGE; timeTotal.classList.add('radio-live-badge'); }
-    const maxTimeTotal = $('#max-np-time-total');
-    if (maxTimeTotal) { maxTimeTotal.textContent = LIVE_BADGE; maxTimeTotal.classList.add('radio-live-badge'); }
+    // LIVE badge + time reset (use rAF to ensure it runs AFTER any pending app timeupdate)
+    requestAnimationFrame(() => {
+      const timeTotal = $('#time-total');
+      if (timeTotal) { timeTotal.textContent = LIVE_BADGE; timeTotal.classList.add('radio-live-badge'); }
+      const maxTimeTotal = $('#max-np-time-total');
+      if (maxTimeTotal) { maxTimeTotal.textContent = LIVE_BADGE; maxTimeTotal.classList.add('radio-live-badge'); }
 
-    // Progress bar to 0
-    const pf = document.querySelector('.progress-fill');
-    if (pf) pf.style.width = '0%';
-    const mpf = document.querySelector('.max-np-progress-fill');
-    if (mpf) mpf.style.width = '0%';
+      const pf = document.querySelector('.progress-fill');
+      if (pf) pf.style.width = '0%';
+      const mpf = document.querySelector('.max-np-progress-fill');
+      if (mpf) mpf.style.width = '0%';
 
-    // Time current
-    const timeCurrent = $('#time-current');
-    if (timeCurrent) timeCurrent.textContent = '0:00';
+      const timeCurrent = $('#time-current');
+      if (timeCurrent) timeCurrent.textContent = '0:00';
+      const maxTimeCurrent = $('#max-np-time-current');
+      if (maxTimeCurrent) maxTimeCurrent.textContent = '0:00';
+    });
 
     updateMediaSession(station);
   }

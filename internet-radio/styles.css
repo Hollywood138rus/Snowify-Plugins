@@ -1,0 +1,285 @@
+/* ═══════ Internet Radio Plugin ═══════ */
+
+/* ── Radio View Header + Search ── */
+.radio-header {
+  position: relative;
+}
+.radio-search-bar {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+.radio-search-wrap {
+  position: relative;
+  width: 260px;
+  height: 40px;
+  border-radius: 20px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+  transition: background 0.2s, box-shadow 0.2s;
+  overflow: hidden;
+  cursor: pointer;
+}
+.radio-search-wrap:hover {
+  background: var(--bg-highlight);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+}
+.radio-search-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  height: 100%;
+}
+.radio-search-label svg {
+  flex-shrink: 0;
+  color: var(--text-secondary);
+  transition: color 0.2s;
+}
+.radio-search-label span {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  transition: color 0.2s;
+}
+.radio-search-wrap:hover .radio-search-label svg,
+.radio-search-wrap:hover .radio-search-label span {
+  color: var(--text-primary);
+}
+.radio-search-input-wrap {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+}
+.radio-search-input-wrap.hidden { display: none; }
+.radio-search-icon {
+  position: absolute;
+  left: 12px;
+  color: var(--text-primary);
+  pointer-events: none;
+  flex-shrink: 0;
+}
+#radio-search-input {
+  width: 100%;
+  height: 100%;
+  padding: 0 36px 0 38px;
+  border: none;
+  border-radius: 20px;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 500;
+  font-family: var(--font);
+  outline: none;
+}
+#radio-search-input::placeholder {
+  color: var(--text-subdued);
+}
+#radio-search-clear {
+  position: absolute;
+  right: 8px;
+  background: none;
+  border: none;
+  color: var(--text-subdued);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+}
+#radio-search-clear:hover { color: var(--text-primary); }
+
+/* ── Station Card Cover ── */
+.station-cover-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin-bottom: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+  background: linear-gradient(135deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.station-cover-wrap .station-card-cover {
+  position: relative;
+  z-index: 1;
+  width: 64px;
+  height: 64px;
+  border-radius: 8px;
+  object-fit: contain;
+  background: transparent;
+  image-rendering: auto;
+}
+.station-card .album-card-play {
+  z-index: 2;
+}
+.station-cover-fallback {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.station-fallback-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 100%);
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: var(--radius);
+  margin-bottom: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+}
+.station-trending-item .top-song-thumb-wrap {
+  background: linear-gradient(135deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 100%);
+  border-radius: 6px;
+}
+.station-trending-item .top-song-thumb {
+  object-fit: contain;
+  padding: 6px;
+  width: 44px;
+  height: 44px;
+}
+.station-trending-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 6px;
+  width: 44px;
+  height: 44px;
+}
+.station-trending-fallback svg {
+  width: 22px;
+  height: 22px;
+}
+
+/* ── Genre Card ── */
+.radio-genre-card {
+  border-left: 3px solid transparent;
+}
+
+/* ── Back Button ── */
+.radio-back-btn {
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-secondary);
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  margin: 0 0 16px 0;
+  transition: background 0.2s, color 0.2s;
+}
+.radio-back-btn:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-primary);
+}
+
+/* ═══════ Radio Mode (Now Playing Overrides) ═══════ */
+
+/* ── Bottom bar: hide irrelevant controls ── */
+body.radio-plugin-active #btn-shuffle,
+body.radio-plugin-active #btn-prev,
+body.radio-plugin-active #btn-next,
+body.radio-plugin-active #btn-repeat,
+body.radio-plugin-active #btn-lyrics,
+body.radio-plugin-active #btn-queue {
+  display: none !important;
+}
+body.radio-plugin-active .progress-handle {
+  display: none !important;
+}
+body.radio-plugin-active .progress-bar {
+  cursor: default;
+}
+body.radio-plugin-active .progress-bar:hover {
+  height: 4px;
+}
+
+/* ── Maximized NP: hide irrelevant controls ── */
+body.radio-plugin-active #max-np-shuffle,
+body.radio-plugin-active #max-np-prev,
+body.radio-plugin-active #max-np-next,
+body.radio-plugin-active #max-np-repeat,
+body.radio-plugin-active #max-np-lyrics-toggle {
+  display: none !important;
+}
+body.radio-plugin-active .max-np-progress-handle {
+  display: none !important;
+}
+body.radio-plugin-active .max-np-progress-bar {
+  cursor: default;
+}
+body.radio-plugin-active .max-np-progress-bar:hover {
+  height: 4px;
+}
+
+/* ── Buffering Indicator ── */
+.progress-bar.radio-buffering .progress-fill,
+.max-np-progress-bar.radio-buffering .max-np-progress-fill {
+  width: 100% !important;
+  opacity: 0.4;
+  animation: radio-buffer-shimmer 1.5s ease-in-out infinite;
+}
+
+@keyframes radio-buffer-shimmer {
+  0%   { opacity: 0.15; }
+  50%  { opacity: 0.4; }
+  100% { opacity: 0.15; }
+}
+
+/* ── LIVE Badge on Time Display ── */
+.time.radio-live-badge,
+.max-np-time.radio-live-badge {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(255, 50, 50, 0.2);
+  color: #ff4444;
+  line-height: 1;
+  animation: radio-live-pulse 2s ease-in-out infinite;
+  min-width: auto;
+}
+
+@keyframes radio-live-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* ═══════ Light Theme Overrides ═══════ */
+
+[data-theme="light"] .station-cover-wrap,
+[data-theme="light"] .station-fallback-icon {
+  background: linear-gradient(135deg, rgba(0,0,0,0.04) 0%, rgba(0,0,0,0.02) 100%);
+}
+[data-theme="light"] .station-trending-item .top-song-thumb-wrap,
+[data-theme="light"] .station-trending-fallback {
+  background: rgba(0, 0, 0, 0.04);
+}
+[data-theme="light"] .radio-back-btn {
+  border-color: rgba(0, 0, 0, 0.12);
+  color: var(--text-secondary);
+}
+[data-theme="light"] .radio-back-btn:hover {
+  background: rgba(0, 0, 0, 0.04);
+  color: var(--text-primary);
+}
+[data-theme="light"] .time.radio-live-badge,
+[data-theme="light"] .max-np-time.radio-live-badge {
+  background: rgba(255, 50, 50, 0.12);
+}

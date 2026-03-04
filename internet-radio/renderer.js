@@ -5,7 +5,8 @@
   'use strict';
 
   // Guard against double-load
-  if (document.querySelector('#view-radio')) return;
+  if (window._snowifyRadioLoaded) return;
+  window._snowifyRadioLoaded = true;
 
   // ═══════ Constants ═══════
   const API = 'https://de1.api.radio-browser.info';
@@ -13,51 +14,382 @@
   const VOLUME_SCALE = 0.3;
   const SEARCH_DEBOUNCE = 400;
   const PLAY_TIMEOUT = 15000;
+  const SCROLL_DISTANCE = 400;
   const STORAGE_KEY = 'snowify_radio';
+  const LIVE_BADGE = 'LIVE';
 
   const FALLBACK_IMG = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
   const FALLBACK_SVG = '<svg width="48" height="48" viewBox="0 0 16 16" fill="currentColor" style="color:var(--text-subdued)"><path d="M3.05 3.05a7 7 0 0 0 0 9.9.5.5 0 0 1-.707.707 8 8 0 0 1 0-11.314.5.5 0 0 1 .707.707m2.122 2.122a4 4 0 0 0 0 5.656.5.5 0 1 1-.708.708 5 5 0 0 1 0-7.072.5.5 0 0 1 .708.708m5.656-.708a.5.5 0 0 1 .708 0 5 5 0 0 1 0 7.072.5.5 0 1 1-.708-.708 4 4 0 0 0 0-5.656.5.5 0 0 1 0-.708m2.122-2.12a.5.5 0 0 1 .707 0 8 8 0 0 1 0 11.313.5.5 0 0 1-.707-.707 7 7 0 0 0 0-9.9.5.5 0 0 1 0-.707zM6 8a2 2 0 1 1 2.5 1.937V15.5a.5.5 0 0 1-1 0V9.937A2 2 0 0 1 6 8"/></svg>';
   const NAV_ICON_SVG = '<svg width="24" height="24" viewBox="0 0 16 16" fill="currentColor"><path d="M3.05 3.05a7 7 0 0 0 0 9.9.5.5 0 0 1-.707.707 8 8 0 0 1 0-11.314.5.5 0 0 1 .707.707m2.122 2.122a4 4 0 0 0 0 5.656.5.5 0 1 1-.708.708 5 5 0 0 1 0-7.072.5.5 0 0 1 .708.708m5.656-.708a.5.5 0 0 1 .708 0 5 5 0 0 1 0 7.072.5.5 0 1 1-.708-.708 4 4 0 0 0 0-5.656.5.5 0 0 1 0-.708m2.122-2.12a.5.5 0 0 1 .707 0 8 8 0 0 1 0 11.313.5.5 0 0 1-.707-.707 7 7 0 0 0 0-9.9.5.5 0 0 1 0-.707zM6 8a2 2 0 1 1 2.5 1.937V15.5a.5.5 0 0 1-1 0V9.937A2 2 0 0 1 6 8"/></svg>';
   const GENRE_COLORS = ['#e74c3c', '#e67e22', '#f1c40f', '#2ecc71', '#1abc9c', '#3498db', '#9b59b6', '#e84393', '#00cec9', '#fd79a8', '#6c5ce7', '#00b894'];
 
-  // i18n helper with English fallbacks
-  const FALLBACKS = {
-    'nav.radio': 'Radio',
-    'radio.title': 'Radio',
-    'radio.searchStations': 'Search stations',
-    'radio.searchPlaceholder': 'Search radio stations...',
-    'radio.yourStations': 'Your Stations',
-    'radio.popularInCity': 'Popular in {{city}}, {{country}}',
-    'radio.popularInCountry': 'Popular in {{country}}',
-    'radio.popularStations': 'Popular Stations',
-    'radio.trendingIn': 'Trending in {{country}}',
-    'radio.trendingWorldwide': 'Trending Worldwide',
-    'radio.yourCountry': 'Your Country',
-    'radio.browseByTag': 'Browse by Tag',
-    'radio.allTagStations': 'All "{{tag}}" Stations',
-    'radio.allResults': 'All Results',
-    'radio.resultsFor': 'Results for "{{query}}"',
-    'radio.noStationsFor': 'No stations found for "{{query}}".',
-    'radio.couldNotLoad': 'Could not load radio stations.',
-    'radio.liveRadio': 'Live Radio',
-    'radio.noQueue': 'Live Radio — no queue',
-    'player.play': 'Play',
-    'toast.radioNoStreamUrl': 'No stream URL for this station',
-    'toast.radioTuningIn': 'Tuning in: {{name}}',
-    'toast.radioUnavailable': 'Station unavailable — try another',
-    'toast.radioStationRemoved': 'Removed: {{name}}',
-    'toast.radioStationAdded': 'Added: {{name}}',
-    'toast.radioStreamEnded': 'Radio stream ended — try another station',
-    'toast.radioStreamLost': 'Radio stream lost — try another station',
-    'toast.radioStreamStalled': 'Radio stream stalled — try another station',
+  // ═══════ i18n ═══════
+  const TRANSLATIONS = {
+    en: {
+      'nav.radio': 'Radio',
+      'radio.title': 'Radio',
+      'radio.searchStations': 'Search stations',
+      'radio.searchPlaceholder': 'Search radio stations...',
+      'radio.yourStations': 'Your Stations',
+      'radio.popularInCity': 'Popular in {{city}}, {{country}}',
+      'radio.popularInCountry': 'Popular in {{country}}',
+      'radio.popularStations': 'Popular Stations',
+      'radio.trendingIn': 'Trending in {{country}}',
+      'radio.trendingWorldwide': 'Trending Worldwide',
+      'radio.yourCountry': 'Your Country',
+      'radio.browseByTag': 'Browse by Tag',
+      'radio.allTagStations': 'All "{{tag}}" Stations',
+      'radio.allResults': 'All Results',
+      'radio.resultsFor': 'Results for "{{query}}"',
+      'radio.noStationsFor': 'No stations found for "{{query}}".',
+      'radio.couldNotLoad': 'Could not load radio stations.',
+      'radio.liveRadio': 'Live Radio',
+      'radio.noQueue': 'Live Radio — no queue',
+      'player.play': 'Play',
+      'toast.radioNoStreamUrl': 'No stream URL for this station',
+      'toast.radioTuningIn': 'Tuning in: {{name}}',
+      'toast.radioUnavailable': 'Station unavailable — try another',
+      'toast.radioStationRemoved': 'Removed: {{name}}',
+      'toast.radioStationAdded': 'Added: {{name}}',
+      'toast.radioStreamEnded': 'Radio stream ended — try another station',
+      'toast.radioStreamLost': 'Radio stream lost — try another station',
+      'toast.radioStreamStalled': 'Radio stream stalled — try another station',
+    },
+    es: {
+      'nav.radio': 'Radio',
+      'radio.title': 'Radio',
+      'radio.searchStations': 'Buscar estaciones',
+      'radio.searchPlaceholder': 'Buscar estaciones de radio...',
+      'radio.yourStations': 'Tus estaciones',
+      'radio.popularInCity': 'Popular en {{city}}, {{country}}',
+      'radio.popularInCountry': 'Popular en {{country}}',
+      'radio.popularStations': 'Estaciones populares',
+      'radio.trendingIn': 'Tendencia en {{country}}',
+      'radio.trendingWorldwide': 'Tendencia mundial',
+      'radio.yourCountry': 'Tu país',
+      'radio.browseByTag': 'Explorar por etiqueta',
+      'radio.allTagStations': 'Todas las estaciones de "{{tag}}"',
+      'radio.allResults': 'Todos los resultados',
+      'radio.resultsFor': 'Resultados para "{{query}}"',
+      'radio.noStationsFor': 'No se encontraron estaciones para "{{query}}".',
+      'radio.couldNotLoad': 'No se pudieron cargar las estaciones.',
+      'radio.liveRadio': 'Radio en vivo',
+      'radio.noQueue': 'Radio en vivo — sin cola',
+      'player.play': 'Reproducir',
+      'toast.radioNoStreamUrl': 'No hay URL de transmisión para esta estación',
+      'toast.radioTuningIn': 'Sintonizando: {{name}}',
+      'toast.radioUnavailable': 'Estación no disponible — intenta otra',
+      'toast.radioStationRemoved': 'Eliminada: {{name}}',
+      'toast.radioStationAdded': 'Añadida: {{name}}',
+      'toast.radioStreamEnded': 'La transmisión terminó — intenta otra estación',
+      'toast.radioStreamLost': 'Se perdió la señal — intenta otra estación',
+      'toast.radioStreamStalled': 'La transmisión se detuvo — intenta otra estación',
+    },
+    pt: {
+      'nav.radio': 'Rádio',
+      'radio.title': 'Rádio',
+      'radio.searchStations': 'Buscar estações',
+      'radio.searchPlaceholder': 'Buscar estações de rádio...',
+      'radio.yourStations': 'Suas estações',
+      'radio.popularInCity': 'Popular em {{city}}, {{country}}',
+      'radio.popularInCountry': 'Popular em {{country}}',
+      'radio.popularStations': 'Estações populares',
+      'radio.trendingIn': 'Em alta em {{country}}',
+      'radio.trendingWorldwide': 'Em alta no mundo',
+      'radio.yourCountry': 'Seu país',
+      'radio.browseByTag': 'Explorar por tag',
+      'radio.allTagStations': 'Todas as estações de "{{tag}}"',
+      'radio.allResults': 'Todos os resultados',
+      'radio.resultsFor': 'Resultados para "{{query}}"',
+      'radio.noStationsFor': 'Nenhuma estação encontrada para "{{query}}".',
+      'radio.couldNotLoad': 'Não foi possível carregar as estações.',
+      'radio.liveRadio': 'Rádio ao vivo',
+      'radio.noQueue': 'Rádio ao vivo — sem fila',
+      'player.play': 'Reproduzir',
+      'toast.radioNoStreamUrl': 'Sem URL de transmissão para esta estação',
+      'toast.radioTuningIn': 'Sintonizando: {{name}}',
+      'toast.radioUnavailable': 'Estação indisponível — tente outra',
+      'toast.radioStationRemoved': 'Removida: {{name}}',
+      'toast.radioStationAdded': 'Adicionada: {{name}}',
+      'toast.radioStreamEnded': 'A transmissão terminou — tente outra estação',
+      'toast.radioStreamLost': 'Sinal perdido — tente outra estação',
+      'toast.radioStreamStalled': 'A transmissão parou — tente outra estação',
+    },
+    fr: {
+      'nav.radio': 'Radio',
+      'radio.title': 'Radio',
+      'radio.searchStations': 'Rechercher des stations',
+      'radio.searchPlaceholder': 'Rechercher des stations radio...',
+      'radio.yourStations': 'Vos stations',
+      'radio.popularInCity': 'Populaire à {{city}}, {{country}}',
+      'radio.popularInCountry': 'Populaire en {{country}}',
+      'radio.popularStations': 'Stations populaires',
+      'radio.trendingIn': 'Tendance en {{country}}',
+      'radio.trendingWorldwide': 'Tendance mondiale',
+      'radio.yourCountry': 'Votre pays',
+      'radio.browseByTag': 'Parcourir par tag',
+      'radio.allTagStations': 'Toutes les stations "{{tag}}"',
+      'radio.allResults': 'Tous les résultats',
+      'radio.resultsFor': 'Résultats pour "{{query}}"',
+      'radio.noStationsFor': 'Aucune station trouvée pour "{{query}}".',
+      'radio.couldNotLoad': 'Impossible de charger les stations.',
+      'radio.liveRadio': 'Radio en direct',
+      'radio.noQueue': 'Radio en direct — pas de file',
+      'player.play': 'Lecture',
+      'toast.radioNoStreamUrl': 'Pas d\'URL de diffusion pour cette station',
+      'toast.radioTuningIn': 'Syntonisation : {{name}}',
+      'toast.radioUnavailable': 'Station indisponible — essayez une autre',
+      'toast.radioStationRemoved': 'Supprimée : {{name}}',
+      'toast.radioStationAdded': 'Ajoutée : {{name}}',
+      'toast.radioStreamEnded': 'La diffusion a pris fin — essayez une autre station',
+      'toast.radioStreamLost': 'Signal perdu — essayez une autre station',
+      'toast.radioStreamStalled': 'La diffusion a calé — essayez une autre station',
+    },
+    de: {
+      'nav.radio': 'Radio',
+      'radio.title': 'Radio',
+      'radio.searchStations': 'Sender suchen',
+      'radio.searchPlaceholder': 'Radiosender suchen...',
+      'radio.yourStations': 'Deine Sender',
+      'radio.popularInCity': 'Beliebt in {{city}}, {{country}}',
+      'radio.popularInCountry': 'Beliebt in {{country}}',
+      'radio.popularStations': 'Beliebte Sender',
+      'radio.trendingIn': 'Trending in {{country}}',
+      'radio.trendingWorldwide': 'Weltweit im Trend',
+      'radio.yourCountry': 'Dein Land',
+      'radio.browseByTag': 'Nach Tag durchsuchen',
+      'radio.allTagStations': 'Alle "{{tag}}" Sender',
+      'radio.allResults': 'Alle Ergebnisse',
+      'radio.resultsFor': 'Ergebnisse für "{{query}}"',
+      'radio.noStationsFor': 'Keine Sender gefunden für "{{query}}".',
+      'radio.couldNotLoad': 'Sender konnten nicht geladen werden.',
+      'radio.liveRadio': 'Live-Radio',
+      'radio.noQueue': 'Live-Radio — keine Warteschlange',
+      'player.play': 'Abspielen',
+      'toast.radioNoStreamUrl': 'Keine Stream-URL für diesen Sender',
+      'toast.radioTuningIn': 'Einschalten: {{name}}',
+      'toast.radioUnavailable': 'Sender nicht verfügbar — versuche einen anderen',
+      'toast.radioStationRemoved': 'Entfernt: {{name}}',
+      'toast.radioStationAdded': 'Hinzugefügt: {{name}}',
+      'toast.radioStreamEnded': 'Stream beendet — versuche einen anderen Sender',
+      'toast.radioStreamLost': 'Signal verloren — versuche einen anderen Sender',
+      'toast.radioStreamStalled': 'Stream gestoppt — versuche einen anderen Sender',
+    },
+    ja: {
+      'nav.radio': 'ラジオ',
+      'radio.title': 'ラジオ',
+      'radio.searchStations': 'ステーションを検索',
+      'radio.searchPlaceholder': 'ラジオ局を検索...',
+      'radio.yourStations': 'あなたのステーション',
+      'radio.popularInCity': '{{city}}, {{country}}で人気',
+      'radio.popularInCountry': '{{country}}で人気',
+      'radio.popularStations': '人気のステーション',
+      'radio.trendingIn': '{{country}}のトレンド',
+      'radio.trendingWorldwide': '世界のトレンド',
+      'radio.yourCountry': 'あなたの国',
+      'radio.browseByTag': 'タグで閲覧',
+      'radio.allTagStations': '「{{tag}}」の全ステーション',
+      'radio.allResults': 'すべての結果',
+      'radio.resultsFor': '「{{query}}」の検索結果',
+      'radio.noStationsFor': '「{{query}}」のステーションが見つかりません。',
+      'radio.couldNotLoad': 'ラジオ局を読み込めませんでした。',
+      'radio.liveRadio': 'ライブラジオ',
+      'radio.noQueue': 'ライブラジオ — キューなし',
+      'player.play': '再生',
+      'toast.radioNoStreamUrl': 'このステーションのストリームURLがありません',
+      'toast.radioTuningIn': 'チューニング中: {{name}}',
+      'toast.radioUnavailable': 'ステーション利用不可 — 別のステーションをお試しください',
+      'toast.radioStationRemoved': '削除: {{name}}',
+      'toast.radioStationAdded': '追加: {{name}}',
+      'toast.radioStreamEnded': 'ストリームが終了しました — 別のステーションをお試しください',
+      'toast.radioStreamLost': '信号が失われました — 別のステーションをお試しください',
+      'toast.radioStreamStalled': 'ストリームが停止しました — 別のステーションをお試しください',
+    },
+    ko: {
+      'nav.radio': '라디오',
+      'radio.title': '라디오',
+      'radio.searchStations': '방송국 검색',
+      'radio.searchPlaceholder': '라디오 방송국 검색...',
+      'radio.yourStations': '내 방송국',
+      'radio.popularInCity': '{{city}}, {{country}}에서 인기',
+      'radio.popularInCountry': '{{country}}에서 인기',
+      'radio.popularStations': '인기 방송국',
+      'radio.trendingIn': '{{country}} 트렌딩',
+      'radio.trendingWorldwide': '전 세계 트렌딩',
+      'radio.yourCountry': '내 나라',
+      'radio.browseByTag': '태그로 탐색',
+      'radio.allTagStations': '"{{tag}}" 전체 방송국',
+      'radio.allResults': '모든 결과',
+      'radio.resultsFor': '"{{query}}" 검색 결과',
+      'radio.noStationsFor': '"{{query}}"에 대한 방송국을 찾을 수 없습니다.',
+      'radio.couldNotLoad': '라디오 방송국을 불러올 수 없습니다.',
+      'radio.liveRadio': '라이브 라디오',
+      'radio.noQueue': '라이브 라디오 — 대기열 없음',
+      'player.play': '재생',
+      'toast.radioNoStreamUrl': '이 방송국의 스트림 URL이 없습니다',
+      'toast.radioTuningIn': '수신 중: {{name}}',
+      'toast.radioUnavailable': '방송국 이용 불가 — 다른 방송국을 시도하세요',
+      'toast.radioStationRemoved': '제거됨: {{name}}',
+      'toast.radioStationAdded': '추가됨: {{name}}',
+      'toast.radioStreamEnded': '스트림이 종료되었습니다 — 다른 방송국을 시도하세요',
+      'toast.radioStreamLost': '신호가 끊겼습니다 — 다른 방송국을 시도하세요',
+      'toast.radioStreamStalled': '스트림이 멈췄습니다 — 다른 방송국을 시도하세요',
+    },
+    zh: {
+      'nav.radio': '电台',
+      'radio.title': '电台',
+      'radio.searchStations': '搜索电台',
+      'radio.searchPlaceholder': '搜索广播电台...',
+      'radio.yourStations': '你的电台',
+      'radio.popularInCity': '{{city}}, {{country}}热门',
+      'radio.popularInCountry': '{{country}}热门',
+      'radio.popularStations': '热门电台',
+      'radio.trendingIn': '{{country}}趋势',
+      'radio.trendingWorldwide': '全球趋势',
+      'radio.yourCountry': '你的国家',
+      'radio.browseByTag': '按标签浏览',
+      'radio.allTagStations': '所有"{{tag}}"电台',
+      'radio.allResults': '所有结果',
+      'radio.resultsFor': '"{{query}}"的搜索结果',
+      'radio.noStationsFor': '未找到"{{query}}"的电台。',
+      'radio.couldNotLoad': '无法加载广播电台。',
+      'radio.liveRadio': '直播电台',
+      'radio.noQueue': '直播电台 — 无队列',
+      'player.play': '播放',
+      'toast.radioNoStreamUrl': '此电台没有流媒体URL',
+      'toast.radioTuningIn': '正在调谐: {{name}}',
+      'toast.radioUnavailable': '电台不可用 — 请尝试其他电台',
+      'toast.radioStationRemoved': '已移除: {{name}}',
+      'toast.radioStationAdded': '已添加: {{name}}',
+      'toast.radioStreamEnded': '电台流已结束 — 请尝试其他电台',
+      'toast.radioStreamLost': '信号丢失 — 请尝试其他电台',
+      'toast.radioStreamStalled': '电台流已停滞 — 请尝试其他电台',
+    },
+    it: {
+      'nav.radio': 'Radio',
+      'radio.title': 'Radio',
+      'radio.searchStations': 'Cerca stazioni',
+      'radio.searchPlaceholder': 'Cerca stazioni radio...',
+      'radio.yourStations': 'Le tue stazioni',
+      'radio.popularInCity': 'Popolare a {{city}}, {{country}}',
+      'radio.popularInCountry': 'Popolare in {{country}}',
+      'radio.popularStations': 'Stazioni popolari',
+      'radio.trendingIn': 'Di tendenza in {{country}}',
+      'radio.trendingWorldwide': 'Di tendenza nel mondo',
+      'radio.yourCountry': 'Il tuo paese',
+      'radio.browseByTag': 'Sfoglia per tag',
+      'radio.allTagStations': 'Tutte le stazioni "{{tag}}"',
+      'radio.allResults': 'Tutti i risultati',
+      'radio.resultsFor': 'Risultati per "{{query}}"',
+      'radio.noStationsFor': 'Nessuna stazione trovata per "{{query}}".',
+      'radio.couldNotLoad': 'Impossibile caricare le stazioni radio.',
+      'radio.liveRadio': 'Radio dal vivo',
+      'radio.noQueue': 'Radio dal vivo — nessuna coda',
+      'player.play': 'Riproduci',
+      'toast.radioNoStreamUrl': 'Nessun URL di streaming per questa stazione',
+      'toast.radioTuningIn': 'Sintonizzazione: {{name}}',
+      'toast.radioUnavailable': 'Stazione non disponibile — prova un\'altra',
+      'toast.radioStationRemoved': 'Rimossa: {{name}}',
+      'toast.radioStationAdded': 'Aggiunta: {{name}}',
+      'toast.radioStreamEnded': 'Lo streaming è terminato — prova un\'altra stazione',
+      'toast.radioStreamLost': 'Segnale perso — prova un\'altra stazione',
+      'toast.radioStreamStalled': 'Lo streaming si è bloccato — prova un\'altra stazione',
+    },
+    tr: {
+      'nav.radio': 'Radyo',
+      'radio.title': 'Radyo',
+      'radio.searchStations': 'İstasyon ara',
+      'radio.searchPlaceholder': 'Radyo istasyonu ara...',
+      'radio.yourStations': 'İstasyonlarınız',
+      'radio.popularInCity': '{{city}}, {{country}} bölgesinde popüler',
+      'radio.popularInCountry': '{{country}} bölgesinde popüler',
+      'radio.popularStations': 'Popüler istasyonlar',
+      'radio.trendingIn': '{{country}} trendleri',
+      'radio.trendingWorldwide': 'Dünya genelinde trend',
+      'radio.yourCountry': 'Ülkeniz',
+      'radio.browseByTag': 'Etikete göre göz at',
+      'radio.allTagStations': 'Tüm "{{tag}}" istasyonları',
+      'radio.allResults': 'Tüm sonuçlar',
+      'radio.resultsFor': '"{{query}}" için sonuçlar',
+      'radio.noStationsFor': '"{{query}}" için istasyon bulunamadı.',
+      'radio.couldNotLoad': 'Radyo istasyonları yüklenemedi.',
+      'radio.liveRadio': 'Canlı Radyo',
+      'radio.noQueue': 'Canlı Radyo — kuyruk yok',
+      'player.play': 'Oynat',
+      'toast.radioNoStreamUrl': 'Bu istasyon için yayın URL\'si yok',
+      'toast.radioTuningIn': 'Ayarlanıyor: {{name}}',
+      'toast.radioUnavailable': 'İstasyon kullanılamıyor — başka birini deneyin',
+      'toast.radioStationRemoved': 'Kaldırıldı: {{name}}',
+      'toast.radioStationAdded': 'Eklendi: {{name}}',
+      'toast.radioStreamEnded': 'Yayın sona erdi — başka bir istasyon deneyin',
+      'toast.radioStreamLost': 'Sinyal kesildi — başka bir istasyon deneyin',
+      'toast.radioStreamStalled': 'Yayın durdu — başka bir istasyon deneyin',
+    },
+    ru: {
+      'nav.radio': 'Радио',
+      'radio.title': 'Радио',
+      'radio.searchStations': 'Поиск станций',
+      'radio.searchPlaceholder': 'Поиск радиостанций...',
+      'radio.yourStations': 'Ваши станции',
+      'radio.popularInCity': 'Популярно в {{city}}, {{country}}',
+      'radio.popularInCountry': 'Популярно в {{country}}',
+      'radio.popularStations': 'Популярные станции',
+      'radio.trendingIn': 'В тренде в {{country}}',
+      'radio.trendingWorldwide': 'В мировом тренде',
+      'radio.yourCountry': 'Ваша страна',
+      'radio.browseByTag': 'По тегам',
+      'radio.allTagStations': 'Все станции "{{tag}}"',
+      'radio.allResults': 'Все результаты',
+      'radio.resultsFor': 'Результаты для "{{query}}"',
+      'radio.noStationsFor': 'Станции не найдены для "{{query}}".',
+      'radio.couldNotLoad': 'Не удалось загрузить радиостанции.',
+      'radio.liveRadio': 'Прямой эфир',
+      'radio.noQueue': 'Прямой эфир — без очереди',
+      'player.play': 'Воспроизвести',
+      'toast.radioNoStreamUrl': 'Нет URL потока для этой станции',
+      'toast.radioTuningIn': 'Настройка: {{name}}',
+      'toast.radioUnavailable': 'Станция недоступна — попробуйте другую',
+      'toast.radioStationRemoved': 'Удалена: {{name}}',
+      'toast.radioStationAdded': 'Добавлена: {{name}}',
+      'toast.radioStreamEnded': 'Поток завершён — попробуйте другую станцию',
+      'toast.radioStreamLost': 'Сигнал потерян — попробуйте другую станцию',
+      'toast.radioStreamStalled': 'Поток остановлен — попробуйте другую станцию',
+    },
+    hi: {
+      'nav.radio': 'रेडियो',
+      'radio.title': 'रेडियो',
+      'radio.searchStations': 'स्टेशन खोजें',
+      'radio.searchPlaceholder': 'रेडियो स्टेशन खोजें...',
+      'radio.yourStations': 'आपके स्टेशन',
+      'radio.popularInCity': '{{city}}, {{country}} में लोकप्रिय',
+      'radio.popularInCountry': '{{country}} में लोकप्रिय',
+      'radio.popularStations': 'लोकप्रिय स्टेशन',
+      'radio.trendingIn': '{{country}} में ट्रेंडिंग',
+      'radio.trendingWorldwide': 'विश्वभर में ट्रेंडिंग',
+      'radio.yourCountry': 'आपका देश',
+      'radio.browseByTag': 'टैग से ब्राउज़ करें',
+      'radio.allTagStations': 'सभी "{{tag}}" स्टेशन',
+      'radio.allResults': 'सभी परिणाम',
+      'radio.resultsFor': '"{{query}}" के परिणाम',
+      'radio.noStationsFor': '"{{query}}" के लिए कोई स्टेशन नहीं मिला।',
+      'radio.couldNotLoad': 'रेडियो स्टेशन लोड नहीं हो सके।',
+      'radio.liveRadio': 'लाइव रेडियो',
+      'radio.noQueue': 'लाइव रेडियो — कोई कतार नहीं',
+      'player.play': 'चलाएं',
+      'toast.radioNoStreamUrl': 'इस स्टेशन के लिए स्ट्रीम URL नहीं है',
+      'toast.radioTuningIn': 'ट्यूनिंग: {{name}}',
+      'toast.radioUnavailable': 'स्टेशन उपलब्ध नहीं — दूसरा आज़माएं',
+      'toast.radioStationRemoved': 'हटाया गया: {{name}}',
+      'toast.radioStationAdded': 'जोड़ा गया: {{name}}',
+      'toast.radioStreamEnded': 'स्ट्रीम समाप्त हुई — दूसरा स्टेशन आज़माएं',
+      'toast.radioStreamLost': 'सिग्नल खो गया — दूसरा स्टेशन आज़माएं',
+      'toast.radioStreamStalled': 'स्ट्रीम रुक गई — दूसरा स्टेशन आज़माएं',
+    },
   };
 
   function t(key, params) {
-    if (typeof I18n !== 'undefined' && I18n.t) {
-      const result = I18n.t(key, params);
-      if (result !== key) return result;
-    }
-    let str = FALLBACKS[key] || key;
+    const lang = (typeof I18n !== 'undefined' && I18n.getLocale) ? I18n.getLocale() : 'en';
+    let str = TRANSLATIONS[lang]?.[key] || TRANSLATIONS.en[key] || key;
     if (params) {
       Object.entries(params).forEach(([k, v]) => {
         str = str.replace(new RegExp('\\{\\{' + k + '\\}\\}', 'g'), v);
@@ -74,6 +406,30 @@
 
   function $(sel) { return document.querySelector(sel); }
 
+  function isFavorite(station) {
+    return _state.favoriteStations.some(s => s.stationuuid === station.stationuuid);
+  }
+
+  function updatePlayIcon(btnSelector, isPlaying) {
+    const btn = $(btnSelector);
+    if (!btn) return;
+    const playIcon = btn.querySelector('.icon-play');
+    const pauseIcon = btn.querySelector('.icon-pause');
+    if (playIcon) playIcon.classList.toggle('hidden', isPlaying);
+    if (pauseIcon) pauseIcon.classList.toggle('hidden', !isPlaying);
+  }
+
+  function syncPlayButton(isPlaying) {
+    updatePlayIcon('#btn-play-pause', isPlaying);
+    updatePlayIcon('#max-np-play', isPlaying);
+  }
+
+  function formatTime(totalSeconds) {
+    const m = Math.floor(totalSeconds / 60);
+    const s = totalSeconds % 60;
+    return m + ':' + (s < 10 ? '0' : '') + s;
+  }
+
   // ═══════ Plugin State ═══════
   let _state = { favoriteStations: [] };
   let _active = false;
@@ -84,15 +440,18 @@
   let _searchTimer = null;
   let _audioEl = null;
   let _toastTimeout = null;
-  let _savedNP = null;    // original NP state before radio took over
+  let _savedNP = null;
   let _radioBtn = null;
   let _radioView = null;
+  let _lastTimeSec = -1;    // throttle timeupdate
 
   function loadState() {
     try {
       const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
       if (saved && saved.favoriteStations) _state.favoriteStations = saved.favoriteStations;
-    } catch (_) {}
+    } catch (err) {
+      console.debug('[Radio Plugin] State load failed:', err.message);
+    }
     // Migrate favorites from old built-in state if present
     if (!_state.favoriteStations.length) {
       try {
@@ -101,7 +460,9 @@
           _state.favoriteStations = old.favoriteStations;
           saveState();
         }
-      } catch (_) {}
+      } catch (err) {
+        console.debug('[Radio Plugin] Migration failed:', err.message);
+      }
     }
   }
 
@@ -124,7 +485,6 @@
       if (!res.ok) throw new Error();
       return await res.json();
     } catch (_) {
-      // Fallback to app locale
       const locale = typeof window.snowify !== 'undefined' && window.snowify.getLocale
         ? await window.snowify.getLocale()
         : (navigator.language || 'en');
@@ -195,6 +555,18 @@
       $('#progress-bar')?.classList.remove('radio-buffering');
       $('#max-np-progress-bar')?.classList.remove('radio-buffering');
     });
+    // Elapsed time display (throttled to integer-second changes)
+    _audioEl.addEventListener('timeupdate', () => {
+      if (!_active) return;
+      const secs = Math.floor(_audioEl.currentTime);
+      if (secs === _lastTimeSec) return;
+      _lastTimeSec = secs;
+      const str = formatTime(secs);
+      const tc = $('#time-current');
+      if (tc) tc.textContent = str;
+      const mtc = $('#max-np-time-current');
+      if (mtc) mtc.textContent = str;
+    });
   }
 
   // ═══════ DOM Injection ═══════
@@ -205,6 +577,7 @@
     const btn = document.createElement('button');
     btn.className = 'nav-btn';
     btn.dataset.view = 'radio';
+    btn.setAttribute('aria-label', t('nav.radio'));
     btn.innerHTML = NAV_ICON_SVG + '<span>' + t('nav.radio') + '</span>';
     libraryBtn.after(btn);
     return btn;
@@ -221,14 +594,14 @@
         <div class="radio-search-bar">
           <div class="radio-search-wrap" id="radio-search-wrap">
             <div class="radio-search-label" id="radio-search-label">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="7"/><path d="M16 16l4.5 4.5" stroke-linecap="round"/></svg>
+              <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="7"/><path d="M16 16l4.5 4.5" stroke-linecap="round"/></svg>
               <span>${t('radio.searchStations')}</span>
             </div>
             <div class="radio-search-input-wrap hidden" id="radio-search-input-wrap">
-              <svg class="radio-search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M16 16l4.5 4.5" stroke-linecap="round"/></svg>
+              <svg class="radio-search-icon" aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M16 16l4.5 4.5" stroke-linecap="round"/></svg>
               <input type="text" id="radio-search-input" placeholder="${t('radio.searchPlaceholder')}" spellcheck="false" autocomplete="off" />
-              <button class="search-clear hidden" id="radio-search-clear">
-                <svg width="16" height="16" viewBox="0 0 16 16"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+              <button class="search-clear hidden" id="radio-search-clear" aria-label="Clear search">
+                <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
               </button>
             </div>
           </div>
@@ -267,14 +640,14 @@
 
   // ═══════ Card Builders ═══════
   function buildCard(station) {
-    const hasFavicon = station.favicon && station.favicon.trim();
+    const hasFavicon = station.favicon?.trim();
     const coverHtml = hasFavicon
       ? '<div class="station-cover-wrap"><img class="album-card-cover station-card-cover" src="' + escapeHtml(station.favicon) + '" alt="" loading="lazy" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'\'" /><div class="station-cover-fallback station-fallback-icon" style="display:none">' + FALLBACK_SVG + '</div></div>'
       : '<div class="album-card-cover station-fallback-icon">' + FALLBACK_SVG + '</div>';
     const meta = [station.tags, station.country, station.bitrate ? station.bitrate + ' kbps' : ''].filter(Boolean).join(' · ');
     return '<div class="album-card station-card" data-station-uuid="' + escapeHtml(station.stationuuid) + '">' +
       coverHtml +
-      '<button class="album-card-play" title="' + t('player.play') + '"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7L8 5z"/></svg></button>' +
+      '<button class="album-card-play" title="' + t('player.play') + '" aria-label="' + t('player.play') + '"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7L8 5z"/></svg></button>' +
       '<div class="album-card-name" title="' + escapeHtml(station.name) + '">' + escapeHtml(station.name) + '</div>' +
       '<div class="album-card-meta">' + escapeHtml(meta) + '</div></div>';
   }
@@ -283,15 +656,15 @@
     const cards = stations.map(s => buildCard(s)).join('');
     return '<div class="explore-section"><h2>' + escapeHtml(title) + '</h2>' +
       '<div class="scroll-container">' +
-      '<button class="scroll-arrow scroll-arrow-left" data-dir="left"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>' +
+      '<button class="scroll-arrow scroll-arrow-left" data-dir="left" aria-label="Scroll left"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>' +
       '<div class="album-scroll">' + cards + '</div>' +
-      '<button class="scroll-arrow scroll-arrow-right" data-dir="right"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></button>' +
+      '<button class="scroll-arrow scroll-arrow-right" data-dir="right" aria-label="Scroll right"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></button>' +
       '</div></div>';
   }
 
   function buildTrendingSection(title, stations) {
     const items = stations.map((s, i) => {
-      const hasFav = s.favicon && s.favicon.trim();
+      const hasFav = s.favicon?.trim();
       const thumbHtml = hasFav
         ? '<img class="top-song-thumb" src="' + escapeHtml(s.favicon) + '" alt="" loading="lazy" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'\'" /><div class="top-song-thumb station-trending-fallback" style="display:none">' + FALLBACK_SVG + '</div>'
         : '<div class="top-song-thumb station-trending-fallback">' + FALLBACK_SVG + '</div>';
@@ -299,7 +672,7 @@
       return '<div class="top-song-item station-trending-item" data-station-uuid="' + escapeHtml(s.stationuuid) + '">' +
         '<div class="top-song-rank">' + (i + 1) + '</div>' +
         '<div class="top-song-thumb-wrap">' + thumbHtml +
-        '<div class="top-song-play"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7L8 5z"/></svg></div></div>' +
+        '<div class="top-song-play"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7L8 5z"/></svg></div></div>' +
         '<div class="top-song-info"><div class="top-song-title">' + escapeHtml(s.name) + '</div>' +
         '<div class="top-song-artist">' + escapeHtml(meta) + '</div></div></div>';
     }).join('');
@@ -315,6 +688,7 @@
   }
 
   // ═══════ Station Lookup ═══════
+  // Checks favorites first (user data), then API-loaded cache
   function findByUuid(uuid) {
     return _state.favoriteStations.find(s => s.stationuuid === uuid)
       || _stationsCache.find(s => s.stationuuid === uuid)
@@ -329,13 +703,13 @@
       if (!scrollEl) return;
       container.querySelectorAll('.scroll-arrow').forEach(btn => {
         btn.addEventListener('click', () => {
-          const dir = btn.dataset.dir === 'left' ? -400 : 400;
+          const dir = btn.dataset.dir === 'left' ? -SCROLL_DISTANCE : SCROLL_DISTANCE;
           scrollEl.scrollBy({ left: dir, behavior: 'smooth' });
         });
       });
     });
 
-    // Station card clicks
+    // Station card clicks — FIX: use .stationuuid (lowercase, matches dataset auto-conversion)
     content.querySelectorAll('.station-card').forEach(card => {
       const handler = () => {
         const station = findByUuid(card.dataset.stationUuid);
@@ -366,7 +740,7 @@
         try {
           const stations = await apiByTag(tag);
           _stationsCache = stations;
-          let html = '<button class="radio-back-btn" id="radio-back-btn">&larr; ' + t('radio.title') + '</button>';
+          let html = '<button class="radio-back-btn" id="radio-back-btn" aria-label="Back">&larr; ' + t('radio.title') + '</button>';
           if (stations.length) {
             html += buildScrollSection(tag, stations);
             html += buildTrendingSection(t('radio.allTagStations', { tag }), stations);
@@ -509,9 +883,10 @@
   function pauseMainApp() {
     const playBtn = $('#btn-play-pause');
     if (!playBtn) return;
+    // If pause icon is visible (not hidden), app is currently playing → click to pause
     const pauseIcon = playBtn.querySelector('.icon-pause');
     if (pauseIcon && !pauseIcon.classList.contains('hidden')) {
-      playBtn.click(); // triggers app's togglePlay() → pause
+      playBtn.click();
     }
   }
 
@@ -522,24 +897,6 @@
       if (!isNaN(w)) return (w / 100) * VOLUME_SCALE;
     }
     return 0.5 * VOLUME_SCALE;
-  }
-
-  function syncPlayButton(isPlaying) {
-    const btn = $('#btn-play-pause');
-    if (!btn) return;
-    const playIcon = btn.querySelector('.icon-play');
-    const pauseIcon = btn.querySelector('.icon-pause');
-    if (playIcon) playIcon.classList.toggle('hidden', isPlaying);
-    if (pauseIcon) pauseIcon.classList.toggle('hidden', !isPlaying);
-
-    // Maximized NP play button
-    const maxBtn = $('#max-np-play');
-    if (maxBtn) {
-      const mp = maxBtn.querySelector('.icon-play');
-      const mpp = maxBtn.querySelector('.icon-pause');
-      if (mp) mp.classList.toggle('hidden', isPlaying);
-      if (mpp) mpp.classList.toggle('hidden', !isPlaying);
-    }
   }
 
   // ═══════ Now Playing Takeover ═══════
@@ -584,14 +941,13 @@
     }
 
     // Like button state
-    const isFav = _state.favoriteStations.some(s => s.stationuuid === station.stationuuid);
-    $('#np-like')?.classList.toggle('liked', isFav);
+    $('#np-like')?.classList.toggle('liked', isFavorite(station));
 
     // LIVE badge
     const timeTotal = $('#time-total');
-    if (timeTotal) { timeTotal.textContent = 'LIVE'; timeTotal.classList.add('radio-live-badge'); }
+    if (timeTotal) { timeTotal.textContent = LIVE_BADGE; timeTotal.classList.add('radio-live-badge'); }
     const maxTimeTotal = $('#max-np-time-total');
-    if (maxTimeTotal) { maxTimeTotal.textContent = 'LIVE'; maxTimeTotal.classList.add('radio-live-badge'); }
+    if (maxTimeTotal) { maxTimeTotal.textContent = LIVE_BADGE; maxTimeTotal.classList.add('radio-live-badge'); }
 
     // Progress bar to 0
     const pf = document.querySelector('.progress-fill');
@@ -648,6 +1004,7 @@
 
     _active = true;
     _station = station;
+    _lastTimeSec = -1;
 
     showRadioNP(station);
     syncPlayButton(true);
@@ -672,6 +1029,10 @@
     } catch (err) {
       if (gen !== _generation) return;
       if (err && err.name === 'AbortError') return;
+      // On timeout or error, abort the stale stream
+      _audioEl.pause();
+      _audioEl.removeAttribute('src');
+      _audioEl.load();
       console.error('[Radio Plugin] play error:', err);
       showToast(t('toast.radioUnavailable'));
       cleanup();
@@ -717,12 +1078,12 @@
       });
       showToast(t('toast.radioStationAdded', { name: station.name }));
     }
-    const isFav = idx < 0;
-    $('#np-like')?.classList.toggle('liked', isFav);
-    $('#max-np-like')?.classList.toggle('liked', isFav);
+    const fav = idx < 0;
+    $('#np-like')?.classList.toggle('liked', fav);
+    $('#max-np-like')?.classList.toggle('liked', fav);
     saveState();
     if (_radioView && _radioView.classList.contains('active')) render();
-    return isFav;
+    return fav;
   }
 
   // ═══════ Discord RPC + MediaSession ═══════
@@ -750,96 +1111,69 @@
     navigator.mediaSession.setActionHandler('seekto', null);
   }
 
-  // ═══════ Interceptors ═══════
-  function initInterceptors() {
-    // Play/pause button: capturing listener fires BEFORE app's bubbling listener
-    const playBtn = $('#btn-play-pause');
-    if (playBtn) {
-      playBtn.addEventListener('click', (e) => {
-        if (!_active) return;
-        e.stopImmediatePropagation();
-        e.preventDefault();
-        radioTogglePlay();
-      }, true);
-    }
+  // ═══════ Interceptors (split into focused functions) ═══════
 
-    // Maximized NP play button
-    const maxPlayBtn = $('#max-np-play');
-    if (maxPlayBtn) {
-      maxPlayBtn.addEventListener('click', (e) => {
-        if (!_active) return;
-        e.stopImmediatePropagation();
-        e.preventDefault();
-        radioTogglePlay();
-      }, true);
-    }
+  function interceptButton(selector, guard, handler) {
+    const btn = $(selector);
+    if (!btn) return;
+    btn.addEventListener('click', (e) => {
+      if (!guard()) return;
+      e.stopImmediatePropagation();
+      e.preventDefault();
+      handler();
+    }, true);
+  }
 
-    // Like button intercept for radio favorites
-    const likeBtn = $('#np-like');
-    if (likeBtn) {
-      likeBtn.addEventListener('click', (e) => {
-        if (!_active || !_station) return;
-        e.stopImmediatePropagation();
-        e.preventDefault();
-        toggleFavorite(_station);
-      }, true);
-    }
+  function interceptPlayButtons() {
+    const guard = () => _active;
+    interceptButton('#btn-play-pause', guard, radioTogglePlay);
+    interceptButton('#max-np-play', guard, radioTogglePlay);
+  }
 
-    // Maximized NP like button
-    const maxLikeBtn = $('#max-np-like');
-    if (maxLikeBtn) {
-      maxLikeBtn.addEventListener('click', (e) => {
-        if (!_active || !_station) return;
-        e.stopImmediatePropagation();
-        e.preventDefault();
-        toggleFavorite(_station);
-      }, true);
-    }
+  function interceptLikeButtons() {
+    const guard = () => _active && !!_station;
+    const handler = () => toggleFavorite(_station);
+    interceptButton('#np-like', guard, handler);
+    interceptButton('#max-np-like', guard, handler);
+  }
 
-    // Volume slider — observe style changes to sync radio volume
+  function observeVolume() {
     const volumeFill = document.querySelector('#volume-fill') || document.querySelector('.volume-fill');
-    if (volumeFill) {
-      new MutationObserver(() => {
-        if (!_active || !_audioEl) return;
-        _audioEl.volume = getAppVolume();
-      }).observe(volumeFill, { attributes: true, attributeFilter: ['style'] });
-    }
+    if (!volumeFill) return;
+    new MutationObserver(() => {
+      if (!_active || !_audioEl) return;
+      _audioEl.volume = getAppVolume();
+    }).observe(volumeFill, { attributes: true, attributeFilter: ['style'] });
+  }
 
-    // Time update for elapsed display
-    if (_audioEl) {
-      _audioEl.addEventListener('timeupdate', () => {
-        if (!_active) return;
-        const secs = Math.floor(_audioEl.currentTime);
-        const m = Math.floor(secs / 60);
-        const s = secs % 60;
-        const str = m + ':' + (s < 10 ? '0' : '') + s;
-        const tc = $('#time-current');
-        if (tc) tc.textContent = str;
-        const mtc = $('#max-np-time-current');
-        if (mtc) mtc.textContent = str;
-      });
-    }
-
+  function observeAppPlayback() {
     // Detect when app starts playing music → cleanup radio
-    // Observe the play button state: if pause icon appears and we didn't cause it, app is playing
-    const appPlayObserver = new MutationObserver(() => {
+    // If pause icon appears but our audio is paused AND we didn't just pause it,
+    // the app took over playback
+    const playBtn = $('#btn-play-pause');
+    if (!playBtn) return;
+    const observer = new MutationObserver(() => {
       if (!_active) return;
-      const pauseIcon = playBtn?.querySelector('.icon-pause');
-      // If pause icon is visible but we didn't set it (our audio is paused or we just cleaned up)
-      // This handles the case where user clicks a music track while radio is playing
-      if (pauseIcon && !pauseIcon.classList.contains('hidden') && _audioEl.paused) {
-        // App took over playback — stop radio silently
+      const pauseIcon = playBtn.querySelector('.icon-pause');
+      // Only trigger if pause icon is showing (app is playing) AND our audio is paused
+      // AND we still have an active station (not mid-cleanup)
+      if (pauseIcon && !pauseIcon.classList.contains('hidden') && _audioEl.paused && _station) {
         _active = false;
         _station = null;
         cleanupNP();
       }
     });
-    if (playBtn) {
-      const icons = playBtn.querySelectorAll('svg');
-      icons.forEach(icon => {
-        appPlayObserver.observe(icon, { attributes: true, attributeFilter: ['class'] });
-      });
-    }
+    const icons = playBtn.querySelectorAll('svg');
+    icons.forEach(icon => {
+      observer.observe(icon, { attributes: true, attributeFilter: ['class'] });
+    });
+  }
+
+  function initInterceptors() {
+    interceptPlayButtons();
+    interceptLikeButtons();
+    observeVolume();
+    observeAppPlayback();
   }
 
   // ═══════ Init ═══════

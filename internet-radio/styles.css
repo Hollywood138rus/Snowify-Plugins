@@ -166,11 +166,6 @@
   height: 22px;
 }
 
-/* ── Genre Card ── */
-.radio-genre-card {
-  border-left: 3px solid transparent;
-}
-
 /* ── Back Button ── */
 .radio-back-btn {
   background: none;
@@ -190,26 +185,13 @@
 
 /* ═══════ Radio Mode (Now Playing Overrides) ═══════ */
 
-/* ── Bottom bar: hide irrelevant controls ── */
+/* ── Hide irrelevant controls (bottom bar + maximized NP) ── */
 body.radio-plugin-active #btn-shuffle,
 body.radio-plugin-active #btn-prev,
 body.radio-plugin-active #btn-next,
 body.radio-plugin-active #btn-repeat,
 body.radio-plugin-active #btn-lyrics,
-body.radio-plugin-active #btn-queue {
-  display: none !important;
-}
-body.radio-plugin-active .progress-handle {
-  display: none !important;
-}
-body.radio-plugin-active .progress-bar {
-  cursor: default;
-}
-body.radio-plugin-active .progress-bar:hover {
-  height: 4px;
-}
-
-/* ── Maximized NP: hide irrelevant controls ── */
+body.radio-plugin-active #btn-queue,
 body.radio-plugin-active #max-np-shuffle,
 body.radio-plugin-active #max-np-prev,
 body.radio-plugin-active #max-np-next,
@@ -217,12 +199,15 @@ body.radio-plugin-active #max-np-repeat,
 body.radio-plugin-active #max-np-lyrics-toggle {
   display: none !important;
 }
+body.radio-plugin-active .progress-handle,
 body.radio-plugin-active .max-np-progress-handle {
   display: none !important;
 }
+body.radio-plugin-active .progress-bar,
 body.radio-plugin-active .max-np-progress-bar {
   cursor: default;
 }
+body.radio-plugin-active .progress-bar:hover,
 body.radio-plugin-active .max-np-progress-bar:hover {
   height: 4px;
 }
@@ -244,7 +229,7 @@ body.radio-plugin-active .max-np-progress-bar:hover {
 /* ── LIVE Badge on Time Display ── */
 .time.radio-live-badge,
 .max-np-time.radio-live-badge {
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.5px;
   padding: 2px 6px;

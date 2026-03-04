@@ -892,13 +892,9 @@
     document.querySelectorAll('audio').forEach(a => {
       if (a !== _audioEl && !a.paused) a.pause();
     });
-    // Sync the app's play button UI
-    const playBtn = $('#btn-play-pause');
-    if (!playBtn) return;
-    const pauseIcon = playBtn.querySelector('.icon-pause');
-    if (pauseIcon && !pauseIcon.classList.contains('hidden')) {
-      playBtn.click();
-    }
+    // Sync the app's play button UI (don't use .click() — our interceptor would capture it)
+    updatePlayIcon('#btn-play-pause', false);
+    updatePlayIcon('#max-np-play', false);
   }
 
   function getAppVolume() {

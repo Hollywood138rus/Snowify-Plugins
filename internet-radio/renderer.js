@@ -574,13 +574,13 @@
       if (tc) tc.textContent = str;
       const mtc = $('#max-np-time-current');
       if (mtc) mtc.textContent = str;
-      // Reinforce LIVE badge (app's timeupdate may overwrite it)
+      // Reinforce LIVE badge (app's updateProgress may overwrite textContent)
       const tt = $('#time-total');
-      if (tt && !tt.classList.contains('radio-live-badge')) {
+      if (tt && tt.textContent !== LIVE_BADGE) {
         tt.textContent = LIVE_BADGE; tt.classList.add('radio-live-badge');
       }
       const mtt = $('#max-np-time-total');
-      if (mtt && !mtt.classList.contains('radio-live-badge')) {
+      if (mtt && mtt.textContent !== LIVE_BADGE) {
         mtt.textContent = LIVE_BADGE; mtt.classList.add('radio-live-badge');
       }
     });

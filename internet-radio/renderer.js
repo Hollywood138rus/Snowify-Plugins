@@ -1235,22 +1235,34 @@
   }
 
   function guardAppAudio() {
-    // Intercept play events on app's audio elements to prevent dual audio.
-    // Catches spacebar, MediaSession, thumbbar, and any programmatic play()
-    // that bypasses our button click interceptors.
+    // When app's audio starts playing while radio is active, stop radio
+    // and let the song continue. Covers playTrack(), sidebar clicks, etc.
     ['#audio-player', '#audio-player-b'].forEach(sel => {
       const el = $(sel);
       if (!el) return;
       el.addEventListener('play', () => {
         if (!_active || _ignoreAppPlayback) return;
-        el.pause();
+        cleanup();
       });
     });
+  }
+
+  function interceptKeyboard() {
+    // Intercept spacebar so it toggles radio instead of app's togglePlay()
+    document.addEventListener('keydown', (e) => {
+      if (!_active) return;
+      if (e.code === 'Space' && !e.target.matches('input, textarea, [contenteditable]')) {
+        e.stopImmediatePropagation();
+        e.preventDefault();
+        radioTogglePlay();
+      }
+    }, true);
   }
 
   function initInterceptors() {
     interceptPlayButtons();
     interceptLikeButtons();
+    interceptKeyboard();
     observeVolume();
     observeAppPlayback();
     guardAppAudio();

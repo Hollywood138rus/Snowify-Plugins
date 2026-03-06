@@ -1,0 +1,12 @@
+{
+  "id": "internet-radio",
+  "name": "Internet Radio",
+  "version": "1.0.0",
+  "description": "Browse and listen to thousands of internet radio stations worldwide.",
+  "author": "ssantss",
+  "icon": "📻",
+  "renderer": "renderer.js",
+  "styles": "styles.css",
+  "official": true,
+  "minAppVersion": "1.2.8"
+}
